@@ -1,0 +1,10 @@
+{
+  "description": "Streamlines last-mile delivery operations by helping couriers optimize routes based on vehicle type and road conditions, report traffic issues in real-time, and coordinate arrival times with recipients for seamless handoffs.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
