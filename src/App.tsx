@@ -1624,7 +1624,7 @@ type TestFlow = "c2" | "c3" | "c6";
 const flowMeta = {
   c2: { code: "C2", title: "Rekomendasi Rute", total: 8 },
   c3: { code: "C3", title: "Laporan Kondisi Jalan", total: 12 },
-  c6: { code: "C6", title: "Notifikasi Kedatangan", total: 11 },
+  c6: { code: "C6", title: "Notifikasi Kedatangan", total: 3 },
 };
 
 function TestInput({
@@ -1699,6 +1699,7 @@ function TestHint({ children }: { children: ReactNode }) {
 function PrototypeTester({ onClose }: { onClose: () => void }) {
   const [flow, setFlow] = useState<TestFlow | null>(null);
   const [step, setStep] = useState(0);
+  const [c6Role, setC6Role] = useState<"kurir" | "penerima" | null>(null);
   const [overlay, setOverlay] = useState<{
     title: string;
     text: string;
@@ -1719,6 +1720,7 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
   const chooseFlow = (value: TestFlow) => {
     setFlow(value);
     setStep(0);
+    setC6Role(null);
     setOverlay(null);
   };
   const next = (target = step + 1) => setStep(target);
@@ -2490,61 +2492,272 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
   };
 
   const renderC6 = () => {
-    if (step === 0)
+    const c6Back = () => {
+      if (step > 0) setStep(step - 1);
+      else setC6Role(null);
+    };
+    const callPerson = (person: string) =>
+      finish(
+        `Menghubungi ${person}`,
+        `Simulasi panggilan kepada ${person}. Tidak ada panggilan telepon sungguhan yang dilakukan.`,
+      );
+
+    if (!c6Role)
       return (
-        <Phone title="Pengantaran Aktif" eyebrow="UJI PROTOTIPE · C6" back onBack={back}>
-          <TestHint>Kirim notifikasi kedatangan kepada penerima paket.</TestHint>
-          <div className="delivery-map">
-            <MapPlaceholder variant="route" />
-            <div className="eta-float">
-              <span>Tiba dalam</span>
-              <strong>20 menit</strong>
-            </div>
+        <Phone title="Pilih Peran C6" eyebrow="NOTIFIKASI KEDATANGAN" back onBack={back}>
+          <TestHint>
+            Pilih peran yang ingin diuji. Seluruh fitur dan alur C6 lama tetap dipertahankan, hanya
+            dipisahkan berdasarkan peran.
+          </TestHint>
+          <div className="intro-copy">
+            <h4>Anda menggunakan aplikasi sebagai siapa?</h4>
+            <p>Pilih tampilan Kurir atau Penerima untuk memulai skenario.</p>
           </div>
-          <div className="package-head">
-            <div>
-              <span>PAKET #PKT-72841</span>
-              <h4>Rina Pratama</h4>
-              <p>Jl. Melati No. 18, Sukajadi</p>
-            </div>
+          <div className="scenario-list">
             <button
-              className="round-button"
-              onClick={() => finish("Panggilan disimulasikan", "Menghubungi Rina Pratama.")}
+              onClick={() => {
+                setC6Role("kurir");
+                setStep(0);
+              }}
             >
-              <Icon name="phone" />
+              <b>
+                <Icon name="bike" />
+              </b>
+              <div>
+                <strong>C6 Kurir</strong>
+                <span>Pengantaran aktif, koordinasi dengan penerima, dan serah terima paket.</span>
+              </div>
+              <Icon name="arrow" />
+            </button>
+            <button
+              onClick={() => {
+                setC6Role("penerima");
+                setStep(0);
+              }}
+            >
+              <b>
+                <Icon name="user" />
+              </b>
+              <div>
+                <strong>C6 Penerima</strong>
+                <span>Notifikasi, pelacakan, kesiapan, lokasi, pesan, dan kendala penerimaan.</span>
+              </div>
+              <Icon name="arrow" />
             </button>
           </div>
-          <div className="summary-band boxed">
-            <Metric value="09.25" label="Estimasi tiba" />
-            <Metric value="4,2 km" label="Jarak tersisa" />
+        </Phone>
+      );
+
+    if (c6Role === "kurir") {
+      if (step === 0)
+        return (
+          <Phone title="Pengantaran Aktif" eyebrow="C6 · TAMPILAN KURIR" back onBack={c6Back}>
+            <TestHint>
+              Periksa rute dan estimasi tiba, hubungi penerima bila diperlukan, lalu kirim
+              notifikasi kedatangan.
+            </TestHint>
+            <div className="delivery-map">
+              <MapPlaceholder variant="route" />
+              <div className="eta-float">
+                <span>Tiba dalam</span>
+                <strong>20 menit</strong>
+              </div>
+            </div>
+            <div className="package-head">
+              <div>
+                <span>PAKET #PKT-72841</span>
+                <h4>Rina Pratama</h4>
+                <p>Jl. Melati No. 18, Sukajadi</p>
+              </div>
+              <button
+                className="round-button"
+                onClick={() => callPerson("Rina Pratama · Penerima")}
+              >
+                <Icon name="phone" />
+              </button>
+            </div>
+            <div className="summary-band boxed">
+              <Metric value="09.25" label="Estimasi tiba" />
+              <Metric value="4,2 km" label="Jarak tersisa" />
+            </div>
+            <div className="current-status">
+              <span>Status pengantaran</span>
+              <div>
+                <i />
+                <strong>Dalam Perjalanan</strong>
+              </div>
+            </div>
+            <InfoRow
+              icon="message"
+              label="Catatan penerima"
+              value={message || "Hubungi ketika sudah sampai"}
+            />
+            <div className="spacer" />
+            <Button
+              onClick={() =>
+                finish(
+                  "Notifikasi terkirim",
+                  "Penerima menerima notifikasi perkiraan kedatangan kurir.",
+                  1,
+                )
+              }
+            >
+              Kirim Notifikasi Kedatangan
+            </Button>
+          </Phone>
+        );
+      if (step === 1)
+        return (
+          <Phone title="Respons Penerima" eyebrow="C6 · TAMPILAN KURIR" back onBack={c6Back}>
+            <TestHint>Periksa respons kesiapan penerima dan instruksi yang dikirimkan.</TestHint>
+            <div className="response-banner">
+              <Icon name={ready === "Siap" ? "check" : "clock"} size={32} />
+              <div>
+                <span>PENERIMA MERESPONS</span>
+                <strong>
+                  {ready === "Siap" ? "Siap menerima paket" : "Belum siap menerima paket"}
+                </strong>
+                <p>Respons diterima</p>
+              </div>
+            </div>
+            <div className="card recipient-card">
+              <div>
+                <span>Penerima</span>
+                <strong>Rina Pratama</strong>
+                <p>Jl. Melati No. 18, Sukajadi</p>
+              </div>
+              <button
+                className="round-button"
+                onClick={() => callPerson("Rina Pratama · Penerima")}
+              >
+                <Icon name="phone" />
+              </button>
+            </div>
+            <div className="coordination-status">
+              <span>Status koordinasi</span>
+              <div>
+                <i>
+                  <Icon name="check" size={13} />
+                </i>
+                <p>
+                  <strong>Notifikasi kedatangan terkirim</strong>
+                  <span>09.10 WIB</span>
+                </p>
+              </div>
+              <div>
+                <i>
+                  <Icon name="check" size={13} />
+                </i>
+                <p>
+                  <strong>
+                    {ready === "Siap" ? "Penerima menyatakan siap" : "Penerima belum siap"}
+                  </strong>
+                  <span>09.13 WIB</span>
+                </p>
+              </div>
+              <div>
+                <i>3</i>
+                <p>
+                  <strong>Serah terima paket</strong>
+                  <span>Menunggu kedatangan</span>
+                </p>
+              </div>
+            </div>
+            <div className="note small">
+              <Icon name="message" />
+              <p>
+                <strong>Pesan penerima</strong>
+                <span>“{message || "Tidak ada pesan tambahan"}”</span>
+              </p>
+            </div>
+            <div className="spacer" />
+            <Button onClick={() => next(2)}>Lanjutkan Navigasi</Button>
+          </Phone>
+        );
+      return (
+        <Phone title="Serah Terima Paket" eyebrow="C6 · TAMPILAN KURIR" back onBack={c6Back}>
+          <div className="handoff-hero">
+            <div>
+              <Icon name="home" size={37} />
+            </div>
+            <span>KURIR TIBA DI TUJUAN</span>
+            <h4>Konfirmasi serah terima</h4>
+            <p>Pastikan paket telah diterima oleh penerima yang benar.</p>
+          </div>
+          <div className="card handoff-card">
+            <span>PAKET #PKT-72841</span>
+            <h4>Rina Pratama</h4>
+            <p>Jl. Melati No. 18, Sukajadi</p>
+            <div className="divider" />
+            <div className="row-between">
+              <span>Waktu tiba</span>
+              <strong>09.34 WIB</strong>
+            </div>
+          </div>
+          <Field label="Nama penerima paket" value="Rina Pratama" />
+          <div
+            className="proof-box"
+            role="button"
+            tabIndex={0}
+            onClick={() =>
+              setOverlay({
+                title: "Bukti ditambahkan",
+                text: "Foto serah terima berhasil disimulasikan.",
+                icon: "check",
+              })
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setOverlay({
+                  title: "Bukti ditambahkan",
+                  text: "Foto serah terima berhasil disimulasikan.",
+                  icon: "check",
+                });
+              }
+            }}
+          >
+            <Icon name="plus" />
+            <div>
+              <strong>Tambah bukti serah terima</strong>
+              <span>Foto atau tanda tangan penerima</span>
+            </div>
+          </div>
+          <div className="check-confirm">
+            <span>
+              <Icon name="check" />
+            </span>
+            <p>Saya memastikan paket telah diserahkan kepada penerima.</p>
           </div>
           <div className="spacer" />
           <Button
+            icon="send"
             onClick={() =>
               finish(
-                "Notifikasi terkirim",
-                "Penerima mendapat pemberitahuan bahwa kurir akan tiba dalam 15 menit.",
-                1,
+                "Bukti serah terima berhasil dikirim",
+                "Bukti serah terima paket telah dikirim. Penerima mendapatkan notifikasi bahwa paket telah diserahkan oleh kurir.",
+                0,
               )
             }
           >
-            Kirim Notifikasi Kedatangan
+            Kirim Bukti Serah Terima
           </Button>
         </Phone>
       );
-    if (step === 1)
+    }
+
+    // C6 Penerima: delapan layar asli dipisahkan dari alur Kurir.
+    if (step === 0)
       return (
-        <Phone title="Kiriman Anda" eyebrow="NOTIFIKASI PENERIMA" onBack={back}>
+        <Phone title="Kiriman Anda" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
+          <TestHint>Periksa notifikasi perkiraan kedatangan dan informasi kurir.</TestHint>
           <div className="arrival-hero">
             <span>PERKIRAAN KEDATANGAN</span>
             <strong>15</strong>
             <p>menit lagi</p>
             <small>Kurir diperkirakan tiba pukul 09.25</small>
           </div>
-          <button
-            className="courier-card interactive-card"
-            onClick={() => finish("Profil kurir", "Adi Saputra · ID Kurir K-1842 · Sepeda Motor.")}
-          >
+          <div className="courier-card">
             <div className="avatar">
               <Icon name="user" size={26} />
             </div>
@@ -2553,8 +2766,10 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
               <strong>Adi Saputra</strong>
               <p>ID Kurir K-1842 · Sepeda Motor</p>
             </div>
-            <Icon name="arrow" />
-          </button>
+            <button className="round-button" onClick={() => callPerson("Adi Saputra · Kurir")}>
+              <Icon name="phone" />
+            </button>
+          </div>
           <div className="notification-box">
             <Icon name="clock" />
             <p>
@@ -2562,16 +2777,22 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
               <span>Siapkan diri untuk menerima paket.</span>
             </p>
           </div>
+          <div className="card">
+            <span>Tujuan pengantaran</span>
+            <h4>Jl. Melati No. 18</h4>
+            <p>Sukajadi, Bandung 40162</p>
+          </div>
           <div className="spacer" />
-          <Button onClick={() => next(2)}>Buka Status Pengantaran</Button>
-          <Button secondary onClick={() => next(3)}>
-            Konfirmasi Kesiapan
-          </Button>
+          <Button onClick={() => next(1)}>Lihat Status Pengantaran</Button>
         </Phone>
       );
-    if (step === 2)
+    if (step === 1)
       return (
-        <Phone title="Status Pengantaran" eyebrow="PAKET #PKT-72841" onBack={back}>
+        <Phone title="Status Pengantaran" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
+          <div className="package-code">
+            <span>PAKET #PKT-72841</span>
+            <strong>Estimasi tiba 09.25</strong>
+          </div>
           <div className="mini-location larger">
             <MapPlaceholder variant="route" />
           </div>
@@ -2589,20 +2810,19 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
               <strong>Adi Saputra</strong>
               <p>Sepeda Motor · K-1842</p>
             </div>
-            <button
-              className="round-button"
-              onClick={() => finish("Panggilan disimulasikan", "Menghubungi Adi Saputra.")}
-            >
+            <button className="round-button" onClick={() => callPerson("Adi Saputra · Kurir")}>
               <Icon name="phone" />
             </button>
           </div>
           <div className="spacer" />
-          <Button onClick={() => next(3)}>Konfirmasi Kesiapan</Button>
+          <Button secondary onClick={() => next(2)}>
+            Konfirmasi Kesiapan
+          </Button>
         </Phone>
       );
-    if (step === 3)
+    if (step === 2)
       return (
-        <Phone title="Konfirmasi Kesiapan" eyebrow="UNTUK PENERIMA" onBack={back}>
+        <Phone title="Konfirmasi Kesiapan" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
           <div className="readiness-hero">
             <div>
               <Icon name="home" size={40} />
@@ -2610,19 +2830,25 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
             <h4>Apakah Anda siap menerima paket?</h4>
             <p>Kurir diperkirakan tiba dalam 12 menit.</p>
           </div>
+          <div className="card">
+            <InfoRow icon="clock" label="Perkiraan tiba" value="09.25 WIB" />
+            <InfoRow icon="location" label="Alamat" value="Jl. Melati No. 18" />
+          </div>
           <div className="choice-stack">
             {(["Siap", "Belum Siap"] as const).map((item) => (
               <button
+                key={item}
                 className={ready === item ? "selected" : ""}
                 onClick={() => setReady(item)}
-                key={item}
               >
                 <div>
                   <Icon name={item === "Siap" ? "check" : "clock"} />
                   <span>
                     <strong>{item}</strong>
                     <small>
-                      {item === "Siap" ? "Saya dapat menerima paket" : "Saya perlu waktu tambahan"}
+                      {item === "Siap"
+                        ? "Saya dapat menerima paket"
+                        : "Saya perlu waktu atau tidak tersedia"}
                     </small>
                   </span>
                 </div>
@@ -2631,70 +2857,12 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           <div className="spacer" />
-          <Button
-            onClick={() =>
-              finish(
-                "Jawaban terkirim",
-                `Kurir menerima informasi bahwa Anda ${ready.toLowerCase()}.`,
-                4,
-              )
-            }
-          >
-            Kirim Jawaban
-          </Button>
+          <Button onClick={() => next(3)}>Kirim Jawaban</Button>
         </Phone>
       );
-    if (step === 4)
+    if (step === 3)
       return (
-        <Phone title="Respons Penerima" eyebrow="TAMPILAN KURIR" onBack={back}>
-          <div className="response-banner">
-            <Icon name={ready === "Siap" ? "check" : "clock"} size={32} />
-            <div>
-              <span>PENERIMA MERESPONS</span>
-              <strong>
-                {ready === "Siap" ? "Siap menerima paket" : "Belum siap menerima paket"}
-              </strong>
-              <p>Baru saja</p>
-            </div>
-          </div>
-          <div className="coordination-status">
-            <span>Status koordinasi</span>
-            <div>
-              <i>
-                <Icon name="check" size={13} />
-              </i>
-              <p>
-                <strong>Notifikasi kedatangan terkirim</strong>
-                <span>09.10 WIB</span>
-              </p>
-            </div>
-            <div>
-              <i>
-                <Icon name="check" size={13} />
-              </i>
-              <p>
-                <strong>Respons penerima diterima</strong>
-                <span>09.13 WIB</span>
-              </p>
-            </div>
-            <div>
-              <i>3</i>
-              <p>
-                <strong>Serah terima paket</strong>
-                <span>Menunggu kedatangan</span>
-              </p>
-            </div>
-          </div>
-          <div className="spacer" />
-          <Button onClick={() => next(5)}>Lihat Pembaruan Kedatangan</Button>
-          <Button secondary onClick={() => next(8)}>
-            Kirim Pesan Tambahan
-          </Button>
-        </Phone>
-      );
-    if (step === 5)
-      return (
-        <Phone title="Pembaruan Kedatangan" eyebrow="UNTUK PENERIMA" onBack={back}>
+        <Phone title="Pembaruan Kedatangan" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
           <div className="delay-hero">
             <Icon name="clock" size={35} />
             <span>ESTIMASI DIPERBARUI</span>
@@ -2712,23 +2880,34 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
               <strong>09.35</strong>
             </div>
           </div>
+          <div className="card">
+            <div className="row-between">
+              <span>Tambahan waktu</span>
+              <strong>+10 menit</strong>
+            </div>
+            <div className="divider" />
+            <div className="row-between">
+              <span>Jarak tersisa</span>
+              <strong>2,1 km</strong>
+            </div>
+          </div>
           <div className="notification-box">
             <Icon name="warning" />
             <p>
-              <strong>Tambahan waktu 10 menit</strong>
-              <span>Pengingat akan muncul saat kurir mendekat.</span>
+              <strong>Mohon maaf atas keterlambatan</strong>
+              <span>Anda akan menerima pengingat saat kurir mendekat.</span>
             </p>
           </div>
           <div className="spacer" />
-          <Button onClick={() => next(6)}>Simulasikan Kurir Mendekat</Button>
-          <Button secondary onClick={() => next(9)}>
-            Laporkan Kendala Penerimaan
+          <Button secondary onClick={() => callPerson("Adi Saputra · Kurir")}>
+            Hubungi Kurir
           </Button>
+          <Button onClick={() => next(4)}>Lanjutkan</Button>
         </Phone>
       );
-    if (step === 6)
+    if (step === 4)
       return (
-        <Phone title="Kurir Hampir Tiba" eyebrow="PENGINGAT KEDATANGAN" onBack={back}>
+        <Phone title="Kurir Hampir Tiba" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
           <div className="reminder-hero">
             <div className="radar">
               <Icon name="bike" size={42} />
@@ -2740,6 +2919,16 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
           <div className="arrival-count">
             <span>Diperkirakan tiba dalam</span>
             <strong>3 menit</strong>
+          </div>
+          <div className="card recipient-card">
+            <div>
+              <span>Kurir</span>
+              <strong>Adi Saputra</strong>
+              <p>Sepeda Motor · K-1842</p>
+            </div>
+            <button className="round-button" onClick={() => callPerson("Adi Saputra · Kurir")}>
+              <Icon name="phone" />
+            </button>
           </div>
           <div className="checklist">
             <strong>Persiapkan serah terima</strong>
@@ -2753,47 +2942,44 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
             </p>
           </div>
           <div className="spacer" />
-          <Button onClick={() => next(7)}>Konfirmasi Lokasi</Button>
-          <Button secondary onClick={() => next(8)}>
-            Kirim Pesan ke Kurir
-          </Button>
+          <Button onClick={() => next(5)}>Saya Siap</Button>
         </Phone>
       );
-    if (step === 7)
+    if (step === 5)
       return (
-        <Phone title="Konfirmasi Lokasi" eyebrow="UNTUK PENERIMA" onBack={back}>
-          <button
-            className="map-clickable location-map"
-            onClick={() =>
-              finish("Titik lokasi diubah", "Pin pengantaran dipindahkan ke gerbang samping.")
-            }
-          >
-            <MapPlaceholder variant="location" label="Ketuk untuk ubah titik" />
-          </button>
+        <Phone title="Konfirmasi Lokasi" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
+          <div className="location-map">
+            <MapPlaceholder variant="location" label="Titik pengantaran" />
+          </div>
           <div className="location-pin-caption">
             <span>ALAMAT PENGANTARAN</span>
             <strong>Jl. Melati No. 18</strong>
             <p>Sukajadi, Bandung 40162</p>
           </div>
-          <TestInput
-            label="Patokan lokasi"
-            value={destination}
-            onChange={setDestination}
-            placeholder="Tambahkan patokan"
-          />
-          <div className="spacer" />
-          <Button
-            onClick={() =>
-              finish("Lokasi dikonfirmasi", "Kurir menerima titik dan patokan lokasi terbaru.", 8)
-            }
-          >
-            Lokasi Sudah Tepat
-          </Button>
+          <div className="accuracy">
+            <Icon name="location" />
+            <div>
+              <strong>Apakah titik ini sudah tepat?</strong>
+              <span>Kurir akan menuju titik yang ditandai.</span>
+            </div>
+          </div>
+          <Field label="Patokan lokasi" value="Gerbang hijau, samping Apotek Sehat" />
+          <div className="button-row">
+            <Button
+              secondary
+              onClick={() =>
+                finish("Ubah titik lokasi", "Simulasi pengubahan titik lokasi pengantaran.")
+              }
+            >
+              Ubah Titik
+            </Button>
+            <Button onClick={() => next(6)}>Lokasi Tepat</Button>
+          </div>
         </Phone>
       );
-    if (step === 8)
+    if (step === 6)
       return (
-        <Phone title="Pesan untuk Kurir" eyebrow="UNTUK PENERIMA" onBack={back}>
+        <Phone title="Pesan untuk Kurir" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
           <div className="intro-copy compact-top">
             <h4>Tambahkan instruksi</h4>
             <p>Pesan akan langsung terlihat oleh kurir.</p>
@@ -2802,119 +2988,93 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
             label="Pesan tambahan"
             value={message}
             onChange={setMessage}
-            placeholder="Tulis pesan untuk kurir"
+            placeholder="Silakan hubungi saya ketika sudah sampai"
             multiline
           />
           <div className="suggestions wide">
             <span>Pesan cepat</span>
-            <button onClick={() => setMessage("Titipkan ke satpam jika saya belum tiba.")}>
-              Titipkan ke satpam
+            <button onClick={() => setMessage("Titipkan ke satpam")}>“Titipkan ke satpam”</button>
+            <button onClick={() => setMessage("Tunggu di gerbang utama")}>
+              “Tunggu di gerbang utama”
             </button>
-            <button onClick={() => setMessage("Tunggu di gerbang utama.")}>
-              Tunggu di gerbang utama
-            </button>
+            <button onClick={() => setMessage("Jangan tekan bel")}>“Jangan tekan bel”</button>
           </div>
           <div className="card">
             <InfoRow icon="user" label="Dikirim kepada" value="Adi Saputra · Kurir K-1842" />
           </div>
+          <div className="note small">
+            <Icon name="message" />
+            <p>
+              <strong>Pesan terkait pengantaran saja</strong>
+              <span>Jangan bagikan informasi sensitif.</span>
+            </p>
+          </div>
           <div className="spacer" />
-          <Button
-            icon="send"
-            disabled={!message.trim()}
-            onClick={() => finish("Pesan terkirim", `“${message}”`, 9)}
-          >
+          <Button icon="send" onClick={() => next(7)}>
             Kirim Pesan
           </Button>
         </Phone>
       );
-    if (step === 9)
-      return (
-        <Phone title="Kendala Penerimaan" eyebrow="UNTUK PENERIMA" onBack={back}>
-          <div className="problem-hero">
-            <Icon name="warning" size={36} />
-            <h4>Tidak dapat menerima paket?</h4>
-            <p>Beri tahu kurir agar pengantaran dapat dikoordinasikan.</p>
-          </div>
-          <div className="radio-list compact-list">
-            {[
-              "Tidak berada di lokasi",
-              "Perlu waktu tambahan",
-              "Alamat perlu diperbaiki",
-              "Tidak ada kendala",
-            ].map((item) => (
-              <button
-                className={problem === item ? "selected" : ""}
-                onClick={() => setProblem(item)}
-                key={item}
-              >
-                <i />
-                <div>
-                  <strong>{item}</strong>
-                </div>
-              </button>
-            ))}
-          </div>
-          <TestInput
-            label="Penjelasan singkat"
-            value={message}
-            onChange={setMessage}
-            placeholder="Berikan informasi untuk kurir"
-            multiline
-          />
-          <div className="spacer" />
-          <Button onClick={() => finish("Informasi diterima kurir", `Kendala: ${problem}.`, 10)}>
-            Kirim Informasi
-          </Button>
-        </Phone>
-      );
     return (
-      <Phone title="Serah Terima Paket" eyebrow="TAMPILAN KURIR" onBack={back}>
-        <div className="handoff-hero">
-          <div>
-            <Icon name="home" size={37} />
-          </div>
-          <span>KURIR TIBA DI TUJUAN</span>
-          <h4>Konfirmasi serah terima</h4>
-          <p>Pastikan paket diterima oleh orang yang benar.</p>
+      <Phone title="Kendala Penerimaan" eyebrow="C6 · TAMPILAN PENERIMA" back onBack={c6Back}>
+        <div className="problem-hero">
+          <Icon name="warning" size={36} />
+          <h4>Tidak dapat menerima paket?</h4>
+          <p>Beri tahu kurir agar pengantaran dapat dikoordinasikan.</p>
         </div>
-        <div className="card handoff-card">
-          <span>PAKET #PKT-72841</span>
-          <h4>Rina Pratama</h4>
-          <p>Jl. Melati No. 18, Sukajadi</p>
-          <div className="divider" />
-          <div className="row-between">
-            <span>Waktu tiba</span>
-            <strong>09.34 WIB</strong>
-          </div>
+        <h4 className="section-label">Pilih alasan</h4>
+        <div className="radio-list compact-list">
+          {[
+            "Tidak berada di lokasi",
+            "Perlu waktu tambahan",
+            "Alamat perlu diperbaiki",
+            "Alasan lainnya",
+          ].map((item) => (
+            <button
+              key={item}
+              className={problem === item ? "selected" : ""}
+              onClick={() => setProblem(item)}
+            >
+              <i />
+              <div>
+                <strong>{item}</strong>
+              </div>
+            </button>
+          ))}
         </div>
-        <button
-          className="proof-box interactive-card"
-          onClick={() => finish("Bukti ditambahkan", "Foto serah terima berhasil disimulasikan.")}
-        >
-          <Icon name="plus" />
-          <div>
-            <strong>Tambah bukti serah terima</strong>
-            <span>Foto atau tanda tangan penerima</span>
-          </div>
-        </button>
-        <div className="check-confirm">
-          <span>
-            <Icon name="check" />
-          </span>
-          <p>Saya memastikan paket telah diserahkan kepada penerima.</p>
+        <TestInput
+          label="Penjelasan singkat"
+          value={message}
+          onChange={setMessage}
+          placeholder="Berikan informasi untuk kurir"
+          multiline
+        />
+        <div className="note small">
+          <Icon name="clock" />
+          <p>
+            <strong>Kurir tiba sekitar 8 menit lagi</strong>
+            <span>Respons Anda akan dikirim segera.</span>
+          </p>
         </div>
         <div className="spacer" />
         <Button
-          icon="check"
+          onClick={() =>
+            finish("Informasi terkirim", `Kendala penerimaan dikirim kepada kurir: ${problem}.`, 0)
+          }
+        >
+          Kirim Informasi
+        </Button>
+        <Button
+          secondary
           onClick={() =>
             finish(
-              "Paket Telah Diserahkan",
-              "Status paket berhasil diperbarui. Skenario C6 selesai.",
+              "Skenario C6 Penerima selesai",
+              "Alur penerima selesai tanpa mengirim kendala.",
               0,
             )
           }
         >
-          Paket Telah Diserahkan
+          Selesai
         </Button>
       </Phone>
     );
@@ -2926,9 +3086,13 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
         <div>
           <strong>Mode Uji Prototipe</strong>
           <span>
-            {flow
-              ? `${flowMeta[flow].code} · Langkah ${step + 1} dari ${flowMeta[flow].total}`
-              : "Pilih skenario tugas"}
+            {flow === "c6" && !c6Role
+              ? "C6 · Pilih peran pengguna"
+              : flow === "c6"
+                ? `C6 ${c6Role === "kurir" ? "Kurir" : "Penerima"} · Langkah ${step + 1} dari ${c6Role === "kurir" ? 3 : 8}`
+                : flow
+                  ? `${flowMeta[flow].code} · Langkah ${step + 1} dari ${flowMeta[flow].total}`
+                  : "Pilih skenario tugas"}
           </span>
         </div>
         <div className="toolbar-actions">
@@ -2937,6 +3101,7 @@ function PrototypeTester({ onClose }: { onClose: () => void }) {
               onClick={() => {
                 setOverlay(null);
                 setFlow(null);
+                setC6Role(null);
               }}
             >
               Ganti skenario
